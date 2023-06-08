@@ -6,7 +6,7 @@
 ## やっていること
 
 1. 環境を作る。  
-   `make inint`
+   `make init`
 2. vanilla_contentにバニラのcontentディレクトリのリンクを貼る。  
    `ln -s HOGE/Cultist Simulator/cultistsimulator_Data/StreamingAssets/content vanilla_content`
 3. 処理しにくいので綺麗なJSONに整形する。  
