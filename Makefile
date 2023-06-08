@@ -107,7 +107,7 @@ init:
 
 .PHONY: all
 all: ## ビルドします
-all: check_vanilla init build
+all: check_vanilla init build package
 
 
 .PHONY: diff-file-list
