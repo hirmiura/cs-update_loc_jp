@@ -16,7 +16,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python    = "^3.11"
 jsonpatch = "^1.32"
-json5     = "^0.9.14"
+dirtyjson = "^1.0.8"
 
 
 [tool.poetry.group.dev.dependencies]
