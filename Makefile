@@ -212,13 +212,13 @@ $(F_JLB).zip:
 
 .PHONY: copy
 copy: ## パッケージ用にファイルをコピーします
-copy: $(D_BLD)/synopsis.json
+copy: $(D_BLD)/synopsis.json $(D_BLD)/cover.png
 	@mkdir -p $(D_BLD)/loc
 	cp -fr $(D_TMP_VAN_FMT_PAD) $(D_BLD)/loc/$(D_JP)
 
-$(D_BLD)/synopsis.json: $(D_SRC)/synopsis.json
-	@mkdir -p $(D_BLD)
-	cp -f $(D_SRC)/synopsis.json $(D_BLD)/
+$(D_BLD)/%: $(D_SRC)/%
+	@mkdir -p $(@D)
+	cp -f $< $@
 
 
 .PHONY: clean
