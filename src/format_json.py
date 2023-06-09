@@ -13,7 +13,8 @@ import time
 
 import dirtyjson
 
-ENC = "utf-8"
+# 何故かcredits.jsonにBOMが付いている
+ENC = "utf-8-sig"
 
 
 def pargs():
