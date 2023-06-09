@@ -44,7 +44,7 @@ D_VAN_C := $(D_VAN)/$(D_CO)
 D_VAN_J := $(D_VAN)/$(D_JP)
 L_VC := $(shell find $(D_VAN_C) -type f -name '*.json' \
 	| sed -E -e '/\/cultures\//d' \
-	-e '/\/(dicta|credits|versionnews|utilities|settings)\.json/d')
+	-e '/\/(dicta|utilities|settings)\.json/d')
 L_VJ := $(shell find $(D_VAN_J) -type f -name '*.json')
 
 # 整形後のファイル群
