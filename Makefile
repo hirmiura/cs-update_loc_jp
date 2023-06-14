@@ -240,7 +240,7 @@ $(F_JLB).zip:
 #==============================================================================
 .PHONY: copy
 copy: ## パッケージ用にファイルをコピーします
-copy: $(D_BLD)/synopsis.json $(D_BLD)/cover.png
+copy: $(D_BLD)/synopsis.json $(D_BLD)/cover.png $(D_BLD)/serapeum_catalogue_number.txt
 	@mkdir -p $(D_BLD)/loc
 	cp -f README.md $(D_BLD)
 	cp -fr $(D_TMP_VAN_PADCS) $(D_BLD)/loc/$(D_JP)
