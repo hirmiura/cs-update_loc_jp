@@ -32,7 +32,7 @@
 - JQ 1.6
 - Python 3.11
   - poetry 1.5.1
-  - pyenv 2.3.18-9-ge0084304
+  - pyenv 2.3.20-1-gd0b78fd5
 
 ## ライセンス
 

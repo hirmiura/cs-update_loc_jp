@@ -9,20 +9,18 @@
 # │   ├── jp.txt
 # │   ├── diff.txt
 # │   └── vanilla_content/
-# │       ├── formatted/ 整形
+# │       ├── normalized/ 正規化
 # │       │   ├── core/
 # │       │   ├── loc_jp/
-# │       │   └── patched/
-# │       ├── normalized/ ハッシュ化
-# │       │   ├── core/
-# │       │   ├── loc_jp/
-# │       │   └── patched/
-# │       ├── diff/
-# │       └── patch/
+# │       ├── diff/  差分
+# │       ├── patch/ パッチ
+# │       ├── patched-normalized/
+# │       └── patched-cs/
 # └── build/ パッケージ用
 #
 #
 SHELL := /bin/bash
+PROC := 4
 
 F_JLB := JapaneseLocalizationBeta
 
@@ -47,34 +45,27 @@ L_VC := $(shell find $(D_VAN_C) -type f -name '*.json' \
 	-e '/\/(dicta|utilities|settings)\.json/d')
 L_VJ := $(shell find $(D_VAN_J) -type f -name '*.json')
 
-# 整形後のファイル群
-D_TMP_VAN     := $(D_TMP)/$(D_VAN)
-D_TMP_VAN_FMT := $(D_TMP_VAN)/$(D_FMT)
-D_TMP_VAN_FMT_CO := $(D_TMP_VAN_FMT)/$(D_CO)
-D_TMP_VAN_FMT_JP := $(D_TMP_VAN_FMT)/$(D_JP)
-L_FC := $(L_VC:$(D_VAN)/%=$(D_TMP_VAN_FMT)/%)
-L_FJ := $(L_VJ:$(D_VAN)/%=$(D_TMP_VAN_FMT)/%)
-
 # 正規化後のファイル群
-D_TMP_VAN_NOR := $(D_TMP_VAN)/$(D_NOR)
+D_TMP_VAN        := $(D_TMP)/$(D_VAN)
+D_TMP_VAN_NOR    := $(D_TMP_VAN)/$(D_NOR)
 D_TMP_VAN_NOR_CO := $(D_TMP_VAN_NOR)/$(D_CO)
 D_TMP_VAN_NOR_JP := $(D_TMP_VAN_NOR)/$(D_JP)
-L_NC := $(L_VC:$(D_VAN)/%=$(D_TMP_VAN_NOR)/%)
-L_NJ := $(L_VJ:$(D_VAN)/%=$(D_TMP_VAN_NOR)/%)
+L_NC := $(L_VC:$(D_VAN)%=$(D_TMP_VAN_NOR)%)
+L_NJ := $(L_VJ:$(D_VAN)%=$(D_TMP_VAN_NOR)%)
 
 # 差分ファイル群
 D_TMP_VAN_DIF := $(D_TMP_VAN)/$(D_DIF)
 D_TMP_VAN_PAT := $(D_TMP_VAN)/$(D_PAT)
-L_DI := $(L_VC:$(D_VAN_C)/%=$(D_TMP_VAN_DIF)/%)
-L_PA := $(L_VC:$(D_VAN_C)/%=$(D_TMP_VAN_PAT)/%)
+L_DI := $(L_VC:$(D_VAN_C)%=$(D_TMP_VAN_DIF)%)
+L_PA := $(L_VC:$(D_VAN_C)%=$(D_TMP_VAN_PAT)%)
 
 # 差分適用後の正規化ファイル群
-D_TMP_VAN_NOR_PAD := $(D_TMP_VAN_NOR)/$(D_PAD)
-L_ND := $(L_VC:$(D_VAN_C)/%=$(D_TMP_VAN_NOR_PAD)/%)
+D_TMP_VAN_PADNOR := $(D_TMP_VAN)/$(D_PAD)-$(D_NOR)
+L_ND := $(L_VC:$(D_VAN_C)%=$(D_TMP_VAN_PADNOR)%)
 
 # 差分適用後のCS形式ファイル群
-D_TMP_VAN_FMT_PAD := $(D_TMP_VAN_FMT)/$(D_PAD)
-L_FD := $(L_VC:$(D_VAN_C)/%=$(D_TMP_VAN_FMT_PAD)/%)
+D_TMP_VAN_PADCS := $(D_TMP_VAN)/$(D_PAD)-cs
+L_FD := $(L_VC:$(D_VAN_C)%=$(D_TMP_VAN_PADCS)%)
 
 
 #==============================================================================
@@ -119,7 +110,7 @@ init:
 #==============================================================================
 .PHONY: all
 all: ## ビルドします
-all: check_vanilla init build package
+all: check_vanilla init normalize diff apply-patch denormalize package
 
 
 #==============================================================================
@@ -143,31 +134,20 @@ $(D_TMP)/jp.txt:
 
 
 #==============================================================================
-# JSONファイルの整形
-#==============================================================================
-.PHONY: formatting
-formatting: ## JSONを整形します
-formatting: $(L_FC) $(L_FJ)
-
-$(L_FC) $(L_FJ):
-	$(eval FN := $(@:$(D_TMP_VAN_FMT)/%=$(D_VAN)/%))
-	@mkdir -p $(@D)
-	@echo -e "\x1b[32mFormatting\x1b[0m $(FN) > $@"
-	@poetry run $(D_SRC)/format_json.py $(FN) > $@
-
-
-#==============================================================================
 # JSONデータの正規化
 #==============================================================================
 .PHONY: normalize
 normalize: ## JSONデータを正規化します
-normalize: formatting $(L_NC) $(L_NJ)
+normalize:
+	make -j $(PROC) _normalize
+
+_normalize: $(L_NC) $(L_NJ)
 
 $(L_NC) $(L_NJ):
-	$(eval FN := $(@:$(D_TMP_VAN_NOR)/%=$(D_TMP_VAN_FMT)/%))
+	$(eval FN := $(@:$(D_TMP_VAN_NOR)/%=$(D_VAN)/%))
 	@mkdir -p $(@D)
 	@echo -e "\x1b[32mNormalizing\x1b[0m $(FN) > $@"
-	@poetry run $(D_SRC)/normalize_json.py $(FN) > $@
+	@poetry run $(D_SRC)/normalize_cs_json.py $(FN) > $@
 
 
 #==============================================================================
@@ -175,7 +155,10 @@ $(L_NC) $(L_NJ):
 #==============================================================================
 .PHONY: diff
 diff: ## 差分を取ります
-diff: normalize $(L_DI)
+diff:
+	make -j $(PROC) _diff
+
+_diff: normalize $(L_DI)
 
 $(L_DI):
 	$(eval FNJ := $(@:$(D_TMP_VAN_DIF)/%=$(D_TMP_VAN_NOR_JP)/%))
@@ -196,12 +179,15 @@ $(L_DI):
 #==============================================================================
 .PHONY: apply-patch
 apply-patch: ## 差分を適用します
-apply-patch: diff $(L_ND)
+apply-patch:
+	make -j $(PROC) _apply-patch
+
+_apply-patch: diff $(L_ND)
 
 $(L_ND):
-	$(eval FNJ := $(@:$(D_TMP_VAN_NOR_PAD)/%=$(D_TMP_VAN_NOR_JP)/%))
-	$(eval FNP := $(@:$(D_TMP_VAN_NOR_PAD)/%=$(D_TMP_VAN_PAT)/%))
-	$(eval FNC := $(@:$(D_TMP_VAN_NOR_PAD)/%=$(D_TMP_VAN_NOR_CO)/%))
+	$(eval FNJ := $(@:$(D_TMP_VAN_PADNOR)/%=$(D_TMP_VAN_NOR_JP)/%))
+	$(eval FNP := $(@:$(D_TMP_VAN_PADNOR)/%=$(D_TMP_VAN_PAT)/%))
+	$(eval FNC := $(@:$(D_TMP_VAN_PADNOR)/%=$(D_TMP_VAN_NOR_CO)/%))
 	@mkdir -p $(@D)
 	@if [[ -f $(FNJ) && -f $(FNP) && -s $(FNP) ]] ; then \
 		echo -e "\x1b[32mJSONpatching\x1b[0m $(FNJ) $(FNP) > $@" ; \
@@ -216,13 +202,16 @@ $(L_ND):
 #==============================================================================
 .PHONY: denormalize
 denormalize: ## Cultist Simulator形式のJSONに戻します
-denormalize: apply-patch $(L_FD)
+denormalize:
+	make -j $(PROC) _denormalize
+
+_denormalize: apply-patch $(L_FD)
 
 $(L_FD):
-	$(eval FN := $(@:$(D_TMP_VAN_FMT_PAD)/%=$(D_TMP_VAN_NOR_PAD)/%))
+	$(eval FN := $(@:$(D_TMP_VAN_PADCS)/%=$(D_TMP_VAN_PADNOR)/%))
 	@mkdir -p $(@D)
 	@echo -e "\x1b[32mDe-Normalizing\x1b[0m $(FN) > $@"
-	@poetry run $(D_SRC)/normalize_json.py -d $(FN) > $@
+	@poetry run $(D_SRC)/normalize_cs_json.py -d $(FN) > $@
 
 
 #==============================================================================
@@ -254,7 +243,7 @@ copy: ## パッケージ用にファイルをコピーします
 copy: $(D_BLD)/synopsis.json $(D_BLD)/cover.png
 	@mkdir -p $(D_BLD)/loc
 	cp -f README.md $(D_BLD)
-	cp -fr $(D_TMP_VAN_FMT_PAD) $(D_BLD)/loc/$(D_JP)
+	cp -fr $(D_TMP_VAN_PADCS) $(D_BLD)/loc/$(D_JP)
 
 $(D_BLD)/%: $(D_SRC)/%
 	@mkdir -p $(@D)
@@ -278,11 +267,6 @@ clean-diff-file-list: ## 英語版と日本語版のファイルリストの差�
 clean-diff-file-list:
 	rm -f $(D_TMP)/diff.txt $(D_TMP)/core.txt $(D_TMP)/jp.txt
 
-.PHONY: clean-formatted
-clean-formatted: ## 整形済みファイルを削除します
-clean-formatted:
-	rm -fr $(D_TMP_VAN_FMT)
-
 .PHONY: clean-normalized
 clean-normalized: ## 整形済みファイルを削除します
 clean-normalized:
@@ -301,12 +285,12 @@ clean-patch:
 .PHONY: clean-patched-normalized
 clean-patched-normalized: ## 差分適用正規化後ファイルを削除します
 clean-patched-normalized:
-	rm -fr $(D_TMP_VAN_NOR_PAD)
+	rm -fr $(D_TMP_VAN_PADNOR)
 
-.PHONY: clean-patched-denormalized
-clean-patched-denormalized: ## 差分適用後整形済みファイルを削除します
-clean-patched-denormalized:
-	rm -fr $(D_TMP_VAN_FMT_PAD)
+.PHONY: clean-patched-cs
+clean-patched-cs: ## 差分適用後整形済みファイルを削除します
+clean-patched-cs:
+	rm -fr $(D_TMP_VAN_PADCS)
 
 .PHONY: clean-build
 clean-build: ## ビルドを削除します
