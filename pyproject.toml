@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cs-update-loc-jp"
-version = "0.1.0"
+version = "0.2.2"
 description = "Cultist Simulatorの日本語ロケールを更新します"
 authors = [ "Hiroshi Miura <hirmiura@gmail.com>" ]
 license = "MIT"
